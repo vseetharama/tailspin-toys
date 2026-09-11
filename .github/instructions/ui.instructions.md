@@ -1,70 +1,63 @@
 ---
-description: 'Central UI strategy and component development philosophy'
+description: 'Central UI strategy and component development philosophy for Tailspin Toys'
 ---
 
 # UI Component Strategy
 
-This file defines the central UI development strategy for Tailspin Toys. Technology-specific guidance is in separate instruction files.
+This file defines the shared UI strategy for Tailspin Toys. The app is a static Astro storefront with Tailwind-based styling and no client-side UI framework, so the UI should stay simple, semantic, and testable.
 
-## Component Architecture
+## Component architecture
 
-### Technology Separation
+### Technology separation
 
-- **Astro** (`.astro` files): Pages, layouts, components, routing, and static content. The site is fully prerendered (`output: 'static'`), so components render to HTML at build time.
-- **Tailwind CSS** (utility classes): Styling
-- **Astro `<script>`**: Reach for a small client-side script only when genuine interactivity is required — there is no client-side UI framework.
+- **Astro** (`.astro` files): pages, layouts, components, routing, and static content
+- **Tailwind CSS**: styling via utility classes and dark theme tokens
+- **Astro `<script>`**: only for genuine client-side behavior; otherwise use plain HTML and CSS
 
-Refer to technology-specific instruction files:
-- [`astro.instructions.md`](astro.instructions.md) - Astro pages, layouts, and components
-- [`style.instructions.md`](style.instructions.md) - Tailwind CSS styling patterns
+Refer to the repo's technology-specific instruction files:
+- [`astro.instructions.md`](astro.instructions.md)
+- [`style.instructions.md`](style.instructions.md)
+- [`playwright.instructions.md`](playwright.instructions.md)
 
-## Core Principles
+## Core principles
 
 ### Testability
 
-- Every interactive element MUST include a `data-testid` attribute
-- Use descriptive test IDs that identify the element's purpose and context
-- Examples: `data-testid="game-card-{game.id}"`, `data-testid="submit-button"`, `data-testid="nav-home"`
+- Every interactive element should include a `data-testid` attribute.
+- Use descriptive IDs that reflect purpose and context, for example `data-testid="game-card-{game.id}"` or `data-testid="nav-home"`.
+- Keep selectors stable and tied to the user's intent rather than implementation details.
 
 ### Accessibility
 
-- Use semantic HTML elements (`<nav>`, `<main>`, `<article>`, `<button>`)
-- Provide ARIA labels and roles where semantic HTML isn't sufficient
-- Use plain `<nav>` with `<a>`/`<button>` elements for site navigation — do **not** add `role="menu"`. Reserve `role="menu"` / `role="menuitem"` for true application-style menus that implement full composite keyboard semantics (arrow-key roving focus, Home/End, type-ahead)
-- Loading states should use `role="status"` and `aria-live="polite"` for screen reader announcements
-- Include Escape key handlers for dismissible elements (menus, modals)
-- Ensure keyboard navigation works for all interactive elements, with proper focus management
-- Include visible focus states: `focus:ring-2 focus:ring-blue-500 focus:outline-none`
-- Maintain sufficient color contrast (especially in dark theme)
+- Use semantic elements such as `<nav>`, `<main>`, `<article>`, `<button>`, and `<a>`.
+- Add ARIA labels or roles only when the native element is not sufficient.
+- Avoid custom menu semantics unless the component truly implements full roving-focus keyboard behavior.
+- Use `role="status"` and `aria-live="polite"` for loading or status updates.
+- Include focus rings and keyboard support for all interactive controls.
+- Maintain strong color contrast for dark-theme text and controls.
 
-### Design Consistency
+### Design consistency
 
-- Dark theme throughout the application
-- Modern, clean UI with rounded corners and smooth transitions
-- Consistent spacing and visual hierarchy
-- Responsive design that works on mobile, tablet, and desktop
+- Keep the application in a dark theme throughout.
+- Use modern, rounded cards and readable spacing.
+- Keep visual hierarchy, content density, and interaction patterns consistent across the site.
+- Favor responsive layout behavior over fixed-width assumptions.
 
-### Component Reusability
+### Reusability
 
-- Create reusable components for common UI patterns
-- Keep components focused on a single responsibility
-- Use props for configuration, not duplication
-- Document component APIs with TypeScript types
+- Build small, focused components with clear responsibilities.
+- Pass data via props rather than duplicating markup across pages.
+- Keep component APIs typed and easy to understand.
 
-## Development Workflow
+## Development workflow
 
-1. **Choose the right tool**: 
-   - Content & structure → Astro components/pages
-   - Styling → Tailwind
-   - Client interactivity (rare) → a scoped Astro `<script>`
+1. Choose the right layer for the job:
+   - Content structure → Astro components/pages
+   - Styling → Tailwind utility classes
+   - Client behavior → a small scoped Astro script only if genuinely needed
 
-2. **Follow technology-specific patterns**: 
-   - Refer to the appropriate instruction file
+2. Follow the repo instruction files for the specific layer being changed.
 
-3. **Ensure testability**: 
-   - Add `data-testid` to all interactive elements
+3. Ensure the UI remains visible, accessible, and testable.
 
-4. **Verify accessibility**: 
-   - Test keyboard navigation
-   - Check focus states
-   - Validate semantic structure
+4. Validate the change with the relevant test or quality-check workflow before finishing.
