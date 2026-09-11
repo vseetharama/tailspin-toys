@@ -40,6 +40,13 @@ ALL UI components MUST use dark theme colors:
 - Mobile-first approach
 - Ensure readability on all screen sizes
 
+## TypeScript and formatting rules
+
+- Keep TypeScript type signatures explicit, especially for exported functions, component props, and helper return values.
+- Prefer interfaces for plain object contracts and named types for reusable shapes; avoid `any` unless the type is intentionally loose and documented.
+- Favor self-documenting naming and small, focused functions over large inline blocks that need explanatory comments.
+- Keep style consistent with the project ESLint setup (`npm run lint`); the repository's rules are the enforcement layer for these conventions, and any new rule should be added to `eslint.config.js` rather than relying on one-off local exceptions.
+
 ## Utility Classes
 
 - Prefer utility classes over custom CSS when possible
