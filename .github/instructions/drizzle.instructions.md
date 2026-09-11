@@ -1,72 +1,80 @@
 ---
-description: 'Drizzle ORM + Node SQLite data layer patterns for the Astro app'
+description: 'Drizzle ORM + Node SQLite data-layer rules for Tailspin Toys'
 applyTo: 'db/**/*.ts,src/lib/*.ts'
 ---
 
 # Drizzle ORM + Node SQLite Instructions
 
-The app's data lives in a local SQLite database accessed through **Drizzle ORM** over Node.js's built-in `node:sqlite` driver. It is consumed at **build time** from Astro page frontmatter — there is no runtime API server. Schema changes are managed with **drizzle-kit** migrations.
+Tailspin Toys keeps all content in a local SQLite database and reads it at build time. The app uses Drizzle ORM with Node.js's built-in `node:sqlite` driver; there is no runtime API layer or separate application server for data access.
 
 ## Layout
 
-- `db/schema.ts` — Drizzle table definitions (`publishers`, `categories`, `games`) and inferred row types. The single source of truth for the schema.
-- `db/transforms.ts` — **pure** functions (CSV parsing, description building, de-duplication, deterministic `ratingFromTitle`). No DB access — easy to unit test.
-- `db/seed.ts` — idempotent seeding from `db/games.csv` using the transforms.
+- `db/schema.ts` — the source of truth for Drizzle tables (`publishers`, `categories`, `games`) and inferred row types.
+- `db/transforms.ts` — pure functions for CSV parsing, description shaping, deduplication, and deterministic derived values.
+- `db/seed.ts` — idempotent seeding logic that loads `db/games.csv`.
 - `db/migrate.ts` — applies generated migrations.
-- `db/migrations/` — generated SQL migrations (do not hand-edit).
-- `db/test-helpers.ts` — `createTestDatabase()` returns a migrated in-memory Node SQLite db for tests.
-- `src/lib/db.ts` — `createDatabase(url)` / `getDatabase()` build the Drizzle client from `DATABASE_URL` (defaults to the local `tailspin.db` file).
-- `src/lib/games.ts` — typed, **injectable-db** data-access helpers used by pages and tests.
+- `db/migrations/` — generated SQL migration files; do not hand-edit them.
+- `db/test-helpers.ts` — `createTestDatabase()` creates a migrated in-memory SQLite database for tests.
+- `src/lib/db.ts` — builds the Drizzle client from `DATABASE_URL` and defaults to the local SQLite file.
+- `src/lib/games.ts` — typed helper functions consumed by Astro pages and Vitest tests.
 
-## Schema Conventions
+## Schema conventions
 
 - Use `sqliteTable` with explicit column names (`text`, `integer`, `real`).
-- Primary keys: `integer('id').primaryKey({ autoIncrement: true })`.
-- Mark required columns `.notNull()`; nullable columns (e.g. `starRating`) are left nullable.
-- Foreign keys use `.references(() => other.id)`.
-- Export inferred types (`typeof table.$inferSelect`) and build app-facing types from them — don't redeclare row shapes by hand.
+- Use `integer('id').primaryKey({ autoIncrement: true })` for primary keys.
+- Mark required columns with `.notNull()` and leave optional values nullable when needed.
+- Use `.references(() => other.id)` for foreign keys.
+- Export inferred types (`typeof table.$inferSelect`) and derive app-facing types from them rather than duplicating row shapes by hand.
 
-## Migrations Workflow
+## Migration workflow
 
-1. Edit `schema.ts`.
-2. Generate a migration: `npm run db:generate` (drizzle-kit).
-3. Apply + seed locally: `npm run db:setup` (`db:migrate` + `db:seed`).
-4. Commit both the schema change **and** the generated migration in `db/migrations/`.
+1. Edit `db/schema.ts`.
+2. Generate a migration with `npm run db:generate`.
+3. Apply and seed locally with `npm run db:setup`.
+4. Commit the schema update and the generated migration in `db/migrations/`.
 
 > [!IMPORTANT]
-> The database must be migrated and seeded **before** `astro build`. The `prebuild`/`predev` npm scripts run `db:setup` automatically; CI relies on this ordering.
+> The database must be migrated and seeded before `astro build`. The `prebuild` and `predev` scripts handle this automatically, and CI depends on that ordering.
 
-## Data-Access Helpers (injectable db)
+## Data-access helper pattern
 
-Helpers take the `db` instance as their first argument so they work both with the real client (in pages) and an in-memory client (in tests):
+Helpers should accept the database instance as the first argument so they work against both the real SQLite client and in-memory tests:
 
 ```ts
-import { asc, count, eq } from 'drizzle-orm';
+import { asc } from 'drizzle-orm';
 import type { Database } from './db';
 import { games } from '../../db/schema';
 
 export async function getAllGameIds(db: Database): Promise<number[]> {
   const rows = await db.select({ id: games.id }).from(games).orderBy(asc(games.title));
-  return rows.map((r) => r.id);
+  return rows.map((row) => row.id);
 }
 ```
 
-- Always `order by` a stable column (title) so static builds are deterministic.
-- Map raw rows to the app-facing `Game`/`Publisher`/`Category` types in one place; don't leak Drizzle row shapes into components.
-- Keep ordering/lookup logic in `games.ts`, not in pages.
+- Use `orderBy` on a stable column such as `title` so static pages are deterministic.
+- Keep ordering and lookup logic in `src/lib/games.ts`, not in page files.
+- Convert raw Drizzle rows into app-facing `Game`, `Publisher`, and `Category` shapes in one place.
 
 ## Determinism
 
-Seed-derived values must be reproducible across builds. Derive star ratings from a stable hash of the title (`ratingFromTitle`) — **never** `Math.random()`.
+Seed-derived values need to be reproducible across builds.
+
+- Derive values like star ratings from a stable hash of the title (`ratingFromTitle`).
+- Never use `Math.random()` for seeded data.
+- Keep CSV parsing and enrichment pure and testable in `db/transforms.ts`.
 
 ## Testing
 
-Unit-test transforms directly and helpers against `createTestDatabase()`. See [`unit-tests.instructions.md`](unit-tests.instructions.md).
+- Test transforms directly with Vitest.
+- Test helper behavior via `createTestDatabase()` and in-memory SQLite.
+- Keep fixtures minimal but representative of game → publisher → category relationships.
 
-## Node.js requirement
+## Runtime and tooling requirements
 
-Node.js 22.13 or later is required because the data layer uses the built-in `node:sqlite` module without an experimental flag. Do not introduce third-party SQLite drivers that ship platform-specific binaries.
+- Use Node.js 22.13 or later.
+- Keep the built-in `node:sqlite` driver; do not introduce a third-party SQLite driver with binary dependencies.
+- Ensure `npm run db:setup` can be run repeatedly without duplicate records or nondeterministic output.
 
 ## Type checking
 
-The data layer (`db/**/*.ts`, `src/lib/*.ts`) is type-checked by `npm run typecheck`, which runs the native **TypeScript 7** compiler (`tsgo`, from `@typescript/native-preview`) against `tsconfig.tsgo.json`. Keep helpers exported with explicit parameter and return types so `tsgo` can verify them. Linting is unaffected — ESLint + `typescript-eslint` still run on the classic `typescript` package.
+The data layer is type-checked with `npm run typecheck` using the native TypeScript 7 compiler (`tsgo` from `@typescript/native-preview`). Keep exported helpers explicit and strongly typed so the compiler can verify them. ESLint continues to use the classic TypeScript package for linting and static analysis.

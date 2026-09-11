@@ -1,39 +1,40 @@
 ---
-description: 'Vitest unit test guidelines for the Astro + Drizzle/Node SQLite data layer'
+description: 'Vitest unit test guidelines for the Astro + Drizzle data layer'
 applyTo: '**/*.test.ts'
 ---
 
 # Unit Testing Guidelines (Vitest + Drizzle/Node SQLite)
 
-Unit tests run with **Vitest** (`npm run test:unit`). They cover the two highest-value, framework-free layers:
+Unit tests run with **Vitest** and cover the parts of the project that are framework-free and highest-value:
 
-1. **Pure transforms** (`db/transforms.ts`) — CSV parsing, description building, de-duplication, deterministic ratings.
-2. **Data-access helpers** (`src/lib/games.ts`) — ordering, lookups — exercised against a real in-memory **Node SQLite** database.
+1. Pure transforms in `db/transforms.ts` (CSV parsing, derived values, deduplication, deterministic ratings)
+2. Data-access helpers in `src/lib/games.ts` against a real in-memory SQLite database
 
 > [!IMPORTANT]
-> Keep tests independent of the Astro runtime. Helpers accept an **injectable `db`** argument; tests pass an in-memory database, pages pass the real client. Never start an Astro server to unit test data logic.
+> Keep tests isolated from the Astro runtime. Helper functions accept an injectable database argument; tests pass an in-memory database while pages pass the real client. Do not start the Astro server to unit test the data layer.
 
-## File Structure
+## File structure
 
-- Co-locate tests next to the code: `transforms.test.ts` beside `transforms.ts`, `games.test.ts` beside `games.ts`.
-- Name pattern: `<module>.test.ts`.
-- Use `describe('<module / function>')` blocks and `it('does X when Y')` cases.
-- Add type annotations on helpers and fixtures — this codebase requires explicit types.
+- Co-locate tests with the code, for example `transforms.test.ts` beside `transforms.ts` and `games.test.ts` beside `games.ts`.
+- Follow the pattern `<module>.test.ts`.
+- Use `describe('<module or function>')` and `it('does X when Y')` naming.
+- Add explicit types for fixtures and helper return values.
 
-## Testing Pure Transforms
+## Testing pure transforms
 
-- No database needed — import the function and assert on its output.
-- Cover: happy path, empty/whitespace input, rows with missing optional fields, de-duplication, and **determinism** (e.g. `ratingFromTitle` returns the same value for the same title and stays within 3.0–5.0).
-- Prefer table-driven cases with `it.each` for input/output matrices.
+- Import the transform functions directly; there is no need for a database.
+- Cover happy paths, empty values, missing optional fields, deduplication, and deterministic behavior.
+- Prefer `it.each` for small input/output matrices.
 
 ```ts
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { ratingFromTitle } from './transforms';
 
 describe('ratingFromTitle', () => {
-  it('is deterministic and within range', () => {
+  it('is deterministic and stays in range', () => {
     const a = ratingFromTitle('Code Quest');
     const b = ratingFromTitle('Code Quest');
+
     expect(a).toBe(b);
     expect(a).toBeGreaterThanOrEqual(3.0);
     expect(a).toBeLessThanOrEqual(5.0);
@@ -41,14 +42,14 @@ describe('ratingFromTitle', () => {
 });
 ```
 
-## Testing Data-Access Helpers
+## Testing data-access helpers
 
-- Build a fresh in-memory database per test with the shared helper `createTestDatabase()` (`db/test-helpers.ts`), which runs migrations on a `:memory:` Node SQLite client.
-- Seed only the fixtures the test needs, then call the helper with that `db`.
-- Always assert the cheap thing first (counts, totals, ordering) before deep object shape.
+- Use the shared `createTestDatabase()` helper from `db/test-helpers.ts` to build a fresh `:memory:` database for each test.
+- Seed only the rows the test needs.
+- Assert the cheap/meaningful state first (counts, ordering, presence of relations) before checking deep object shapes.
 
 ```ts
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDatabase } from '../../db/test-helpers';
 import { getAllGames, getGameById } from './games';
 
@@ -57,30 +58,35 @@ describe('getAllGames', () => {
 
   beforeEach(async () => {
     db = await createTestDatabase();
-    // …seed publishers, categories, games…
+    // seed minimal publishers, categories, games
   });
 
-  it('returns games ordered by title with their relations', async () => {
+  it('returns games ordered by title', async () => {
     const games = await getAllGames(db);
-    const titles = games.map((g) => g.title);
+    const titles = games.map((game) => game.title);
+
     expect(titles).toEqual([...titles].sort());
-    expect(games[0].category).not.toBeNull();
+    expect(games[0]?.category).not.toBeNull();
   });
 });
 ```
 
-## Required Coverage
+## Required coverage
 
-- Success cases with valid data
-- Not-found cases (`getGameById` for a missing id returns `null`)
-- Empty database/collection scenarios
-- Ordering guarantees (alphabetical by title) — static builds depend on this being deterministic
-- Determinism of seed-derived values
+- Valid success cases
+- Not-found cases (`getGameById` returns `null`)
+- Empty collection/database scenarios
+- Sorting by title for deterministic build output
+- Deterministic derived values from stable titles
 
-## Best Practices
+## Best practices
 
 - Follow Arrange-Act-Assert.
-- One behaviour per `it`; avoid asserting unrelated things in a single case.
-- Don't mock the database — an in-memory Node SQLite instance is fast and exercises real SQL/joins.
-- Keep fixtures minimal but representative of relationships (game → publisher, game → category).
-- If a schema change breaks tests, regenerate migrations with `npm run db:generate` and update fixtures.
+- Keep one behavior per test case.
+- Avoid mocking the database; a real in-memory SQLite database exercises the SQL and joins accurately.
+- Keep fixtures minimal but representative of the real game -> publisher -> category relationships.
+- Regenerate migrations with `npm run db:generate` when schema changes break tests.
+
+## Validation
+
+Run unit tests through the project's quality-check workflow rather than ad hoc commands.

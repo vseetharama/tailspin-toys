@@ -1,54 +1,52 @@
 ---
-description: 'Tailwind CSS v4 styling patterns and dark theme guidelines'
+description: 'Tailwind CSS v4 styling rules for Tailspin Toys'
 applyTo: '**/*.{astro,css}'
 ---
 
 # Tailwind CSS Instructions
 
-## Tailwind CSS v4 Configuration
+Tailspin Toys uses Tailwind CSS v4 and a dark theme throughout the storefront. Styling should reinforce the brand while staying clean, readable, and fully accessible.
 
-This project uses Tailwind CSS v4.1.14 via the `@tailwindcss/vite` plugin.
+## Tailwind setup
 
-### Global CSS Setup
+- Use Tailwind via the `@tailwindcss/vite` integration.
+- Import Tailwind in the global stylesheet with `@import "tailwindcss";`.
+- Prefer utility classes over custom CSS unless a small component-level rule is clearly needed.
+- Do not add a separate `tailwind.config.js` unless the project explicitly requires it.
 
-- Import Tailwind in `global.css`: `@import "tailwindcss";`
-- No separate `tailwind.config.js` file is used
-- Configuration is handled through the Vite plugin
+## Dark theme requirements
 
-## Dark Theme Styling
+All UI should default to a dark palette anchored on slate colors:
 
-ALL UI components MUST use dark theme colors:
+- Backgrounds: `bg-slate-800`, `bg-slate-900`, `bg-slate-950`
+- Text: `text-slate-100`, `text-slate-200`, `text-slate-300`
+- Borders: `border-slate-700`, `border-slate-600`
+- Accent and hover states: blue or neutral variants that keep contrast readable
 
-### Color Palette
+## Common patterns
 
-- Background colors: `bg-slate-800`, `bg-slate-900`, `bg-slate-950`
-- Text colors: `text-slate-100`, `text-slate-200`, `text-slate-300`
-- Border colors: `border-slate-700`, `border-slate-600`
-- Accent colors for hover/focus states
-
-### Common Patterns
-
-- Cards and containers: `bg-slate-800 rounded-xl p-6 shadow-lg`
-- Hover effects: `hover:bg-slate-700 transition-colors duration-200`
+- Card containers: `bg-slate-800 rounded-xl p-6 shadow-lg`
+- Hover states: `hover:bg-slate-700 transition-colors duration-200`
 - Borders: `border border-slate-700`
-- Gradients for visual interest: `bg-gradient-to-br from-slate-800 to-slate-900`
-- Backdrop effects: `backdrop-blur-sm bg-slate-900/50`
+- Gradients: `bg-gradient-to-br from-slate-800 to-slate-900`
+- Backdrop overlays: `backdrop-blur-sm bg-slate-900/50`
 
-### Responsive Design
+## Layout and responsiveness
 
-- Use responsive prefixes: `sm:`, `md:`, `lg:`, `xl:`
-- Mobile-first approach
-- Ensure readability on all screen sizes
+- Use mobile-first responsive utilities (`sm:`, `md:`, `lg:`, `xl:`).
+- Keep spacing and typography consistent across cards, tables, and detail pages.
+- Prefer readable text scaling and clear hierarchy over decorative complexity.
 
-## Utility Classes
+## Accessibility and states
 
-- Prefer utility classes over custom CSS when possible
-- Use semantic grouping: layout, spacing, colors, typography
-- Keep utility combinations readable and maintainable
+- Use visible focus styles such as `focus:ring-2 focus:ring-blue-500 focus:outline-none`.
+- Ensure sufficient contrast for text, links, and controls.
+- Preserve keyboard behavior on all interactive elements.
+- Avoid color-only meaning for state changes; pair it with text or icons when needed.
 
-## Modern UI Patterns
+## Styling philosophy
 
-- Rounded corners: `rounded-lg`, `rounded-xl`, `rounded-2xl`
-- Smooth transitions: `transition-all duration-200 ease-in-out`
-- Shadows for depth: `shadow-md`, `shadow-lg`, `shadow-xl`
-- Focus states for accessibility: `focus:ring-2 focus:ring-blue-500`
+- Prefer small, composable utilities over large custom CSS rule sets.
+- Group classes by layout, spacing, color, and interaction in readable order.
+- Keep the UI consistent with the rest of the app and avoid one-off visual styles that break the dark theme.
+- Follow the repo's pattern of using semantic HTML and utility classes rather than a UI framework.

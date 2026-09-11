@@ -1,92 +1,69 @@
 ---
-description: 'Playwright test generation instructions'
+description: 'Playwright E2E test guidance for the Tailspin Toys storefront'
 applyTo: '**/*.spec.ts'
 ---
 
-# Test Writing Guidelines
+# Playwright Test Writing Guidelines
 
-## Code Quality Standards
+Run the end-to-end suite through the project's quality-check workflow rather than invoking Playwright directly. For Tailspin Toys, E2E tests validate the static storefront the same way a user experiences it in the browser.
 
-- **Locators**: Prioritize user-facing, role-based locators (`getByRole`, `getByLabel`, `getByText`, etc.) for resilience and accessibility. Use `test.step()` to group interactions and improve test readability and reporting.
-- **Timeouts**: Rely solely on Playwright's built-in auto-waiting mechanisms. NEVER use hard-coded waits such as `waitForTimeout`, increased default timeouts, or `waitForLoadState`.
-- **Assertions**: Use auto-retrying web-first assertions. These assertions start with the `await` keyword (e.g., `await expect(locator).toHaveText()`). Prefer assertions that verify meaningful state — `toHaveText`, `toContainText`, `toHaveCount`, `toMatchAriaSnapshot`, `toHaveURL` — over a bare `toBeVisible()` when you actually care about content or structure. `toBeVisible()` is a valid auto-retrying assertion and is appropriate for genuine presence/visibility checks; just don't reach for it when a more specific assertion better expresses the intent.
-- **Clarity**: Use descriptive test and step titles that clearly state the intent. Add comments only to explain complex logic or non-obvious interactions.
+## Code quality standards
 
-## Test Structure
+- Prefer user-facing, role-based locators such as `getByRole`, `getByLabel`, and `getByText`.
+- Use `test.step()` to group interactions and make failures easier to diagnose.
+- Use web-first, auto-retrying assertions such as `await expect(locator).toHaveText()`, `toContainText()`, `toHaveURL()`, `toHaveCount()`, and `toMatchAriaSnapshot()`.
+- Avoid hard-coded waits like `waitForTimeout()`, longer default timeouts, or `waitForLoadState()`.
+- Keep test names and step names descriptive and tied to the user behavior under test.
 
-- **Imports**: Start with `import { test, expect } from '@playwright/test';`.
-- **Organization**: Group related tests for a feature under a `test.describe()` block.
-- **Hooks**: Use `beforeEach` for setup actions common to all tests in a `describe` block (e.g., navigating to a page).
-- **Titles**: Follow a clear naming convention, such as `Feature - Specific action or scenario`.
+## Test structure
 
+- Start each file with `import { test, expect } from '@playwright/test';`.
+- Group related scenarios in `test.describe()` blocks.
+- Use `beforeEach()` for shared setup such as navigating to the relevant page.
+- Store feature specs in `e2e-tests/` and follow the pattern `<feature-or-page>.spec.ts`.
 
-## File Organization
+## Assertion best practices
 
-- **Location**: Store all test files in the `e2e-tests/` directory.
-- **Naming**: Use the convention `<feature-or-page>.spec.ts` (e.g., `login.spec.ts`, `search.spec.ts`).
-- **Scope**: Aim for one test file per major application feature or page.
+- Use accessibility snapshots for structure-heavy UI verification.
+- Use `toHaveCount` when the number of matching elements matters.
+- Use `toHaveText` for exact expectations and `toContainText` for partial matches.
+- Use `toHaveURL` for route verification and navigation checks.
+- Only use `toBeVisible()` when visibility itself is the meaningful condition.
 
-## Assertion Best Practices
+## Example
 
-- **UI Structure**: Use `toMatchAriaSnapshot` to verify the accessibility tree structure of a component. This provides a comprehensive and accessible snapshot.
-- **Element Counts**: Use `toHaveCount` to assert the number of elements found by a locator.
-- **Text Content**: Use `toHaveText` for exact text matches and `toContainText` for partial matches.
-- **Navigation**: Use `toHaveURL` to verify the page URL after an action.
-
-
-## Example Test Structure
-
-```typescript
+```ts
 import { test, expect } from '@playwright/test';
 
-test.describe('Movie Search Feature', () => {
+test.describe('Game listing page', () => {
   test.beforeEach(async ({ page }) => {
-    // Navigate to the application before each test
-    await page.goto('https://debs-obrien.github.io/playwright-movies-app');
+    await page.goto('http://localhost:4321');
   });
 
-  test('Search for a movie by title', async ({ page }) => {
-    await test.step('Activate and perform search', async () => {
-      await page.getByRole('search').click();
-      const searchInput = page.getByRole('textbox', { name: 'Search Input' });
-      await searchInput.fill('Garfield');
-      await searchInput.press('Enter');
+  test('shows a visible list of games', async ({ page }) => {
+    await test.step('Open the home page', async () => {
+      await expect(page.getByRole('heading', { name: 'Tailspin Toys' })).toBeVisible();
     });
 
-    await test.step('Verify search results', async () => {
-      // Verify the accessibility tree of the search results
-      await expect(page.getByRole('main')).toMatchAriaSnapshot(`
-        - main:
-          - heading "Garfield" [level=1]
-          - heading "search results" [level=2]
-          - list "movies":
-            - listitem "movie":
-              - link "poster of The Garfield Movie The Garfield Movie rating":
-                - /url: /playwright-movies-app/movie?id=tt5779228&page=1
-                - img "poster of The Garfield Movie"
-                - heading "The Garfield Movie" [level=2]
-      `);
+    await test.step('Verify game cards are rendered', async () => {
+      await expect(page.getByRole('link', { name: /.+/ })).toHaveCount(8);
     });
   });
 });
 ```
 
-## Authoring & Iteration Strategy
+## Authoring and iteration strategy
 
-> [!NOTE]
-> This file covers how specs should be written. To *run* the E2E suite, use the `quality-checks` skill — never invoke `npx playwright test` directly.
+1. Run the suite through the `quality-checks` skill.
+2. Diagnose failures by inspecting the DOM, route, and assertion output.
+3. Refine locators and assertions until they reflect real user intent.
+4. Re-run targeted validation and confirm the feature is stable.
 
-1. **Run**: Execute the suite through the `quality-checks` skill.
-2. **Debug Failures**: Analyze test failures and identify root causes.
-3. **Iterate**: Refine locators, assertions, or test logic as needed, re-running through the skill.
-4. **Validate**: Ensure tests pass consistently and cover the intended functionality.
-5. **Report**: Provide feedback on test results and any issues discovered.
+## Quality checklist
 
-## Quality Checklist
-
-Before finalizing tests, ensure:
-- [ ] All locators are accessible and specific and do not use strict mode violations
-- [ ] Tests are grouped logically and follow a clear structure
-- [ ] Assertions are meaningful and reflect user expectations
-- [ ] Tests follow consistent naming conventions
-- [ ] Code is properly formatted and commented
+Before finalizing a spec, confirm that:
+- all locators are user-facing and resilient
+- the test reflects actual storefront behavior
+- assertions verify meaningful state rather than incidental markup
+- the file is in `e2e-tests/` and follows repo naming conventions
+- no hard-coded waits or brittle selectors were introduced
