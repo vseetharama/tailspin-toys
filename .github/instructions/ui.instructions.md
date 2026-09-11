@@ -20,6 +20,14 @@ Refer to technology-specific instruction files:
 
 ## Core Principles
 
+### Commenting and documentation
+
+- Comment the reasoning behind a decision, the intent of a non-obvious branch, or the invariant that must be preserved.
+- Prefer comments that explain why a solution exists, what trade-off it makes, or which edge case it handles.
+- Do not restate the code in prose. If the code already says "check whether the category is missing," the comment should explain why the missing category is a tolerated legacy condition rather than a bug.
+- Treat outdated comments as bugs: update or remove them during the same change that touches the nearby code.
+- Prefer self-documenting names and explicit TypeScript types over comments that merely echo the function or variable name.
+
 ### Testability
 
 - Every interactive element MUST include a `data-testid` attribute
